@@ -64,3 +64,96 @@ INSERT INTO Provincia (Codigo, Nombre, ComunidadAutonoma) VALUES ('50','Zaragoza
 INSERT INTO Provincia (Codigo, Nombre, ComunidadAutonoma) VALUES ('51','Ceuta','Ciudad Autónoma de Ceuta');
 INSERT INTO Provincia (Codigo, Nombre, ComunidadAutonoma) VALUES ('52','Melilla','Ciudad Autónoma de Melilla');
 COMMIT;
+/* 4. Crear un procedimiento almacenado para meter 10 encuestas por provincia
+-- El código ha sido copiado y pegado antes de aplicar en la interfaz gráfica, 
+-- lo copio aqui para poder ponerlo todo en un archivo SQL
+-- El código original (sin darle a aplicar) era asi:
+DECLARE numero_provincias int;
+DECLARE numero_encuestas int;
+DROP TABLE IF EXISTS resultado;
+CREATE TABLE resultado(
+    idEncuesta INT PRIMARY KEY AUTO_INCREMENT,
+    codigoProvincia CHAR(2),
+    sonido INT CHECK(sonido BETWEEN 0 AND 10),
+    imagen INT CHECK(imagen BETWEEN 0 AND 10),
+    usabilidad INT CHECK(usabilidad BETWEEN 0 AND 10),
+    FOREIGN KEY (codigoProvincia) REFERENCES Provincia(codigo)
+    );
+set numero_provincias = 0;
+set numero_encuestas = 0;-- 
+WHILE numero_provincias <= 52 DO
+	set numero_encuestas = 0; -- Reiniciar el numero de encuestas
+	-- Meter 10 encuestas por provincia
+    WHILE numero_encuestas <= 10 DO
+		INSERT INTO resultado(codigoProvincia,sonido,imagen,usabilidad) 
+        VALUES(
+        LPAD(numero_provincias, 2, '0'),
+        RAND genera un número decimal entre 0 y 1, FLOOR redondea hacia abajo para quitar 
+        los decimales y hay que sumar 1 para que pueda haber del 1 al 10 y no sea del 1 al 9
+        FLOOR(RAND()*10 + 1), 
+        FLOOR(RAND()*10 + 1), 
+        FLOOR(RAND()*10 + 1));
+		set numero_encuestas = numero_encuestas + 1;
+    END WHILE;
+    set numero_provincias = numero_provincias + 1;
+END WHILE;
+END
+*/
+USE `encuestas`;
+DROP procedure IF EXISTS `crear_encuestas`;
+
+USE `encuestas`;
+DROP procedure IF EXISTS `encuestas`.`crear_encuestas`;
+;
+
+DELIMITER $$
+USE `encuestas`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `crear_encuestas`()
+BEGIN
+DECLARE numero_provincias int;
+DECLARE numero_encuestas int;
+DROP TABLE IF EXISTS resultado;
+CREATE TABLE resultado(
+    idEncuesta INT PRIMARY KEY AUTO_INCREMENT,
+    codigoProvincia CHAR(2),
+    sonido INT CHECK(sonido BETWEEN 0 AND 10),
+    imagen INT CHECK(imagen BETWEEN 0 AND 10),
+    usabilidad INT CHECK(usabilidad BETWEEN 0 AND 10),
+    FOREIGN KEY (codigoProvincia) REFERENCES Provincia(codigo)
+    );
+set numero_provincias = 0;
+set numero_encuestas = 0;
+WHILE numero_provincias <= 52 DO
+	set numero_encuestas = 0; -- Reiniciar el numero de encuestas
+	-- Meter 10 encuestas por provincia
+    WHILE numero_encuestas <= 10 DO
+		INSERT INTO resultado(codigoProvincia,sonido,imagen,usabilidad) 
+        VALUES(
+        LPAD(numero_provincias, 2, '0'),
+        /*RAND genera un número decimal entre 0 y 1, FLOOR redondea hacia abajo para quitar 
+        los decimales y hay que sumar 1 para que pueda haber del 1 al 10 y no sea del 1 al 9*/
+        FLOOR(RAND()*10 + 1),
+        FLOOR(RAND()*10 + 1), 
+        FLOOR(RAND()*10 + 1)
+        );
+		set numero_encuestas = numero_encuestas + 1;
+    END WHILE;
+    set numero_provincias = numero_provincias + 1;
+END WHILE;
+END$$
+DELIMITER ;
+;
+call encuestas.crear_encuestas();
+-- 5. Obten un listado de encuestas junto a la media aritmética de las tres valoraciones
+SELECT idEncuesta, codigoProvincia, sonido,imagen,usabilidad,
+((sonido+imagen+usabilidad) / 3) AS media_encuesta FROM resultado
+GROUP BY idEncuesta;
+-- 6. Repite el ejercicio 5, pero añadiendo el nombre de 
+-- la provincia en que se realizó cada encuesta.
+SELECT idEncuesta, provincia.nombre, codigoProvincia, sonido,imagen,usabilidad,
+((sonido+imagen+usabilidad) / 3) AS media_encuesta FROM resultado 
+INNER JOIN provincia ON provincia.codigo = codigoProvincia
+GROUP BY idEncuesta;
+
+-- 7. Obtén el código y nombre de cada una de las provincias junto 
+-- con la media aritmética de las puntuaciones de cada uno de los aspectos
