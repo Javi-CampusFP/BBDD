@@ -179,3 +179,25 @@ GROUP BY provincia.codigo;
 
 -- 9. Basándote en el ejercicio anterior, 
 -- muestra solo la fila donde la media general sea menor o igual a 6.
+SELECT provincia.codigo as CODPROV, provincia.nombre as NOMBRE_PROVINCIA, 
+(SUM(resultado.sonido) / 10) AS MEDIA_SONIDO, 
+(SUM(resultado.imagen) / 10) AS MEDIA_IMAGEN, 
+(SUM(resultado.usabilidad) / 10) AS MEDIA_USABILIDAD, 
+(SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30) AS MEDIA 
+FROM provincia 
+INNER JOIN resultado ON provincia.codigo = resultado.codigoProvincia 
+GROUP BY provincia.codigo 
+HAVING ((SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30) <= 6);
+
+-- 10. Basándote en el ejercicio anterior, muestra la provincia con la mayor media.
+SELECT provincia.codigo as CODPROV, provincia.nombre as NOMBRE_PROVINCIA,
+(SUM(resultado.sonido) / 10) AS MEDIA_SONIDO,
+(SUM(resultado.imagen) / 10) AS MEDIA_IMAGEN, 
+(SUM(resultado.usabilidad) / 10) AS MEDIA_USABILIDAD,
+(SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30) AS MEDIA
+FROM provincia
+INNER JOIN resultado
+  ON provincia.codigo = resultado.codigoProvincia
+GROUP BY provincia.codigo, provincia.nombre
+HAVING (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30)
+ORDER BY MEDIA DESC LIMIT 1;
