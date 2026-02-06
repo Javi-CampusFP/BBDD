@@ -91,20 +91,108 @@ BEGIN
 END;
 $body$;
 CALL encuestas.crear_encuestas();
+
 -- Ejercicio 18
-SELECT SUM(encuestas.resultado)
+SELECT idencuesta, codigoprovincia, valoraciones[1] as nota_sonido, valoraciones[2] as nota_imagen, 
+valoraciones[3] as nota_usabilidad, ((valoraciones[1] + valoraciones[2] + valoraciones[3]) / 3) AS media_nota 
+FROM encuestas.resultado LIMIT 20;
+
 -- Ejercicio 19
+SELECT idencuesta, codigoprovincia, valoraciones[1] as nota_sonido, 
+encuestas.provincia.nombre, valoraciones[2] as nota_imagen, valoraciones[3] as nota_usabilidad, 
+((valoraciones[1] + valoraciones[2] + valoraciones[3]) / 3) as media_nota 
+FROM encuestas.resultado 
+INNER JOIN encuestas.provincia ON provincia.codigo = codigoprovincia LIMIT 20; 
 
 -- Ejercicio 20
+SELECT codigoprovincia, provincia.nombre, 
+(SUM(valoraciones[1]) / 10) AS media_sonido, (SUM(valoraciones[2]) / 10) AS media_imagen, 
+(SUM(valoraciones[3]) / 10) AS media_usabilidad 
+FROM encuestas.resultado 
+INNER JOIN encuestas.provincia ON provincia.codigo = codigoprovincia 
+GROUP BY resultado.codigoprovincia, provincia.nombre LIMIT 20;
 
 -- Ejercicio 21
+SELECT codigoprovincia as CODPROV, provincia.nombre as NOMBRE_PROVINCIA, 
+(SUM(valoraciones[1]) / 10) AS MEDIA_SONIDO, (SUM(valoraciones[2]) / 10) AS MEDIA_IMAGEN, 
+(SUM(valoraciones[3]) / 10) AS MEDIA_USABILIDAD, (SUM(valoraciones[1] + valoraciones[2] + valoraciones[3]) / 30) as MEDIA_GENERAL 
+FROM encuestas.resultado 
+INNER JOIN encuestas.provincia ON provincia.codigo = codigoprovincia 
+GROUP BY resultado.codigoprovincia, provincia.nombre LIMIT 20;
 
 -- Ejercicio 22
+SELECT codigoprovincia as CODPROV, provincia.nombre as NOMBRE_PROVINCIA, 
+(SUM(valoraciones[1]) / 10) AS MEDIA_SONIDO, (SUM(valoraciones[2]) / 10) AS MEDIA_IMAGEN, 
+(SUM(valoraciones[3]) / 10) AS MEDIA_USABILIDAD, (SUM(valoraciones[1] + valoraciones[2] + valoraciones[3]) / 30) as MEDIA_GENERAL 
+FROM encuestas.resultado 
+INNER JOIN encuestas.provincia ON provincia.codigo = codigoprovincia 
+GROUP BY resultado.codigoprovincia, provincia.nombre 
+HAVING((SUM(valoraciones[1] + valoraciones[2] + valoraciones[3]) / 30) <= 6)DESC LIMIT 1;
 
 -- Ejercicio 23
+SELECT codigoprovincia as CODPROV, provincia.nombre as NOMBRE_PROVINCIA, 
+(SUM(valoraciones[1]) / 10) AS MEDIA_SONIDO, (SUM(valoraciones[2]) / 10) AS MEDIA_IMAGEN, 
+(SUM(valoraciones[3]) / 10) AS MEDIA_USABILIDAD, (SUM(valoraciones[1] + valoraciones[2] + valoraciones[3]) / 30) as MEDIA_GENERAL 
+FROM encuestas.resultado 
+INNER JOIN encuestas.provincia ON provincia.codigo = codigoprovincia 
+GROUP BY resultado.codigoprovincia, provincia.nombre 
+ORDER BY DESC LIMIT 1;
 
 -- Ejercicio 24
-
+-- Creo la función
+CREATE OR REPLACE FUNCTION encuestas.valoracion(S integer, I integer, U integer)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $body$
+BEGIN
+  -- Si hay un empate va a ganar en orden de prioridad que se indico en el ejercicio
+  IF S >= I AND S >= U THEN
+    RETURN 'Gana sonido.';
+  ELSIF I >= U AND I >= S THEN
+    RETURN 'Gana imagen.';
+  ELSE
+    RETURN 'Gana usabilidad.';
+  END IF;
+END;
+$body$;
+-- primera SELECT
+SELECT provincia.codigo AS CODPROV, provincia.nombre as NOMBRE_PROVINCIA, 
+encuestas.valoracion(valoraciones[1],valoraciones[2],valoraciones[3]) AS RESULTADO 
+FROM encuestas.provincia INNER JOIN encuestas.resultado ON codigoprovincia = codigo; 
+-- segunda SELECT
+SELECT encuestas.valoracion(valoraciones[1],valoraciones[2],valoraciones[3]) AS RESULTADO, 
+COUNT(*) AS TOTAL
+FROM encuestas.provincia INNER JOIN encuestas.resultado ON codigoprovincia = codigo
+GROUP BY RESULTADO, CODPROV; 
 -- Ejercicio 25
+-- Crear la tabla
+CREATE TABLE encuestas.encuestas_old(
+  idEncuesta serial PRIMARY KEY,
+	codigoProvincia character(2),
+	valoraciones INT[3]);
+-- Crear el trigger
 
+CREATE OR REPLACE FUNCTION encuestas.mover_datos()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO encuestas.encuestas_old (
+        idencuesta,
+        codigoprovincia,
+        valoraciones
+    )
+    VALUES (
+        OLD.idencuesta,
+        OLD.codigoprovincia,
+        OLD.valoraciones
+    );
+
+    RETURN OLD;
+END;
+$$;
+CREATE TRIGGER trigger_eliminar_datos AFTER DELETE ON encuestas.resultado 
+FOR EACH ROW
+EXECUTE FUNCTION encuestas.mover_datos();
 -- Ejercicio 26
+
