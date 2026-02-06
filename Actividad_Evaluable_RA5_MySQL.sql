@@ -201,3 +201,96 @@ INNER JOIN resultado
 GROUP BY provincia.codigo, provincia.nombre
 HAVING (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30)
 ORDER BY MEDIA DESC LIMIT 1;
+
+-- 11. Crea una función llamada valoración conforme a las especificaciones que detallo a continuación.
+-- La función recive como argumento 3 valores de tipo INT
+-- La función retornará uno de estos textos: Gana Sonido, Gana Imagen o Gana Usabilidad.
+-- En caso de empate, la prioridad irá en el orden: Sonido,Imagen,Usabilidad.
+/*
+Código antes de aplicar el apply en la interfaz gráfica:
+CREATE DEFINER=`root`@`localhost` FUNCTION `valoracion`(S int, I int, U int) 
+RETURNS varchar(15)
+DETERMINISTIC
+BEGIN
+	declare resultado VARCHAR(15);
+	if (S >= I) AND (S >= U) THEN
+		set resultado = 'Gana sonido';
+	ELSEIF (I >= S) AND (I >= U) THEN
+		set resultado = 'Gana imagen';
+	ELSE
+		set resultado = 'Gana usabilidad';
+	END IF;
+RETURN resultado;
+END
+*/
+-- Código despues de aplicar el apply en la interfaz gráfica:
+USE `encuestas`;
+DROP function IF EXISTS `valoracion`;
+USE `encuestas`;
+DROP function IF EXISTS `encuestas`.`valoracion`;
+;
+DELIMITER $$
+USE `encuestas`$$
+CREATE DEFINER=`root`@`localhost` FUNCTION `valoracion`(S int, I int, U int) 
+RETURNS varchar(15)
+DETERMINISTIC
+BEGIN
+	declare resultado VARCHAR(15);
+	if (S >= I) AND (S >= U) THEN
+		set resultado = 'Gana sonido';
+	ELSEIF (I >= S) AND (I >= U) THEN
+		set resultado = 'Gana imagen';
+	ELSE
+		set resultado = 'Gana usabilidad';
+	END IF;
+RETURN resultado;
+END$$
+DELIMITER ;
+;
+-- Ejecuta un SELECT para obtener el listado de encuestas.
+SELECT provincia.codigo AS CODPROV,
+	provincia.nombre AS NOMBRE_PROVINCIA,
+	valoracion(resultado.sonido, resultado.imagen, resultado.usabilidad) AS RESULTADO
+FROM provincia
+INNER JOIN resultado
+ON provincia.codigo = resultado.codigoProvincia;
+-- Ejecuta un select para contar el número de encuestas donde gana sonido, imagen o usabilidad.
+SELECT
+  valoracion(sonido, imagen, usabilidad) AS ganador,
+  COUNT(*) AS total
+FROM resultado
+GROUP BY ganador;
+
+-- 12. Completa los siguientes ejercicios.
+-- Crea encuesta_old con la misma estructura que resultado
+CREATE TABLE encuesta_old(
+    idEncuesta INT PRIMARY KEY AUTO_INCREMENT,
+    codigoProvincia CHAR(2),
+    sonido INT CHECK(sonido BETWEEN 0 AND 10),
+    imagen INT CHECK(imagen BETWEEN 0 AND 10),
+    usabilidad INT CHECK(usabilidad BETWEEN 0 AND 10),
+    FOREIGN KEY (codigoProvincia) REFERENCES Provincia(codigo)
+);
+-- Crear un trigger
+/*
+Código antes de darle a apply desde la interfaz gráfica
+CREATE DEFINER = CURRENT_USER TRIGGER `encuestas`.`resultado_BEFORE_DELETE_1` BEFORE DELETE ON `resultado` FOR EACH ROW
+BEGIN
+	INSERT INTO encuesta_old (codigoProvincia,sonido,imagen,usabilidad) 
+    VALUES ( old.codigoProvincia,old.sonido,old.imagen,old.usabilidad);
+END
+*/
+-- Crear el trigger. Este es el código que me proporciona el apply.
+DROP TRIGGER IF EXISTS `encuestas`.`resultado_BEFORE_DELETE`;
+
+DELIMITER $$
+USE `encuestas`$$
+CREATE DEFINER=`root`@`localhost` TRIGGER `resultado_BEFORE_DELETE` BEFORE DELETE ON `resultado` FOR EACH ROW BEGIN
+	INSERT INTO encuesta_old (
+    codigoProvincia,sonido,imagen,usabilidad) --
+    VALUES ( old.codigoProvincia,old.sonido,old.imagen,old.usabilidad);
+END$$
+DELIMITER ;
+-- Probar el trigger
+DELETE FROM resultado WHERE idEncuesta = 1;
+SELECT * FROM encuesta_old;
