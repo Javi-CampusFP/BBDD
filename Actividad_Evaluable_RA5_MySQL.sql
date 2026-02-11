@@ -144,16 +144,16 @@ END$$
 DELIMITER ;
 ;
 call encuestas.crear_encuestas();
+
 -- 5. Obten un listado de encuestas junto a la media aritmética de las tres valoraciones
 SELECT idEncuesta, codigoProvincia, sonido,imagen,usabilidad,
-((sonido+imagen+usabilidad) / 3) AS media_encuesta FROM resultado
-GROUP BY idEncuesta;
+((sonido+imagen+usabilidad) / 3) AS media_encuesta FROM resultado;
+
 -- 6. Repite el ejercicio 5, pero añadiendo el nombre de 
 -- la provincia en que se realizó cada encuesta.
 SELECT idEncuesta, provincia.nombre, codigoProvincia, sonido,imagen,usabilidad,
 ((sonido+imagen+usabilidad) / 3) AS media_encuesta FROM resultado 
-INNER JOIN provincia ON provincia.codigo = codigoProvincia
-GROUP BY idEncuesta;
+INNER JOIN provincia ON provincia.codigo = codigoProvincia;
 
 -- 7. Obtén el código y nombre de cada una de las provincias junto 
 -- con la media aritmética de las puntuaciones de cada uno de los aspectos
@@ -162,8 +162,7 @@ SELECT provincia.codigo, provincia.nombre,
 (SUM(resultado.imagen) / 10) AS media_imagen, 
 (SUM(resultado.usabilidad) / 10) AS media_usabilidad
 FROM provincia
-INNER JOIN resultado
-  ON provincia.codigo = resultado.codigoProvincia
+INNER JOIN resultado ON provincia.codigo = resultado.codigoProvincia
 GROUP BY provincia.codigo;
 
 -- 8. Añade el ejercicio anterior la media de las tres medias.
@@ -173,8 +172,7 @@ SELECT provincia.codigo as CODPROV, provincia.nombre as NOMBRE_PROVINCIA,
 (SUM(resultado.usabilidad) / 10) AS MEDIA_USABILIDAD,
 (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30) AS MEDIA
 FROM provincia
-INNER JOIN resultado
-  ON provincia.codigo = resultado.codigoProvincia
+INNER JOIN resultado ON provincia.codigo = resultado.codigoProvincia
 GROUP BY provincia.codigo;
 
 -- 9. Basándote en el ejercicio anterior, 
@@ -196,8 +194,7 @@ SELECT provincia.codigo as CODPROV, provincia.nombre as NOMBRE_PROVINCIA,
 (SUM(resultado.usabilidad) / 10) AS MEDIA_USABILIDAD,
 (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30) AS MEDIA
 FROM provincia
-INNER JOIN resultado
-  ON provincia.codigo = resultado.codigoProvincia
+INNER JOIN resultado ON provincia.codigo = resultado.codigoProvincia
 GROUP BY provincia.codigo, provincia.nombre
 HAVING (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30)
 ORDER BY MEDIA DESC LIMIT 1;
@@ -294,3 +291,13 @@ DELIMITER ;
 -- Probar el trigger
 DELETE FROM resultado WHERE idEncuesta = 1;
 SELECT * FROM encuesta_old;
+-- 13. Sentencia para exportar el csv
+SELECT provincia.codigo as CODPROV, provincia.nombre as NOMBRE_PROVINCIA,
+(SUM(resultado.sonido) / 10) AS MEDIA_SONIDO,
+(SUM(resultado.imagen) / 10) AS MEDIA_IMAGEN, 
+(SUM(resultado.usabilidad) / 10) AS MEDIA_USABILIDAD
+FROM provincia
+INNER JOIN resultado
+  ON provincia.codigo = resultado.codigoProvincia
+GROUP BY provincia.codigo, provincia.nombre
+HAVING (SUM(resultado.sonido + resultado.imagen + resultado.usabilidad) / 30);
